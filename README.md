@@ -1,153 +1,180 @@
-# 🚦 Smart Traffic Navigation & Algorithm Visualization System
+# Traffix
 
-> A futuristic, cyberpunk-inspired interactive system for visualizing graph pathfinding algorithms in a simulated smart city. Built as a DAA (Design and Analysis of Algorithms) mini project.
+Traffix is a modern smart traffic navigation web application powered by Dijkstra Algorithm. It uses real OpenStreetMap tiles, real place search through Nominatim, browser geolocation, animated route rendering, and simulated traffic-aware routing.
 
----
+The algorithm is used behind the scenes to solve a realistic navigation problem.
 
-## 📸 Features
+## Features
 
-- 🗺️ Interactive city graph with 15 nodes and 25 edges
-- ⚡ Real-time algorithm visualization: Dijkstra, A*, BFS, DFS, Floyd-Warshall
-- 🚗 Dynamic traffic simulation with congestion controls
-- 📊 Side-by-side algorithm comparison dashboard
-- 🚨 Emergency vehicle priority routing mode
-- 🎵 Sci-fi audio feedback (Tone.js)
-- 📱 PWA — installable on mobile & desktop
-- 🌌 Cyberpunk UI with Framer Motion animations
+- Real map interaction with OpenStreetMap and Leaflet
+- Real source and destination search with Nominatim autocomplete
+- Use Current Location with the browser geolocation API
+- Dijkstra-only routing
+- Two route modes: Shortest Distance and Fastest Route
+- Simulated traffic levels: Low, Medium, Heavy
+- Green, yellow, and red traffic road visualization
+- Traffic-aware route weights for fastest routing
+- Distance and ETA metrics for walking, cycling, bike, and car
+- Smooth animated route reveal on the map
+- Responsive UI with a mobile bottom-sheet search panel
+- PWA support for installable desktop and mobile usage
 
----
+## Tech Stack
 
-## 🛠️ Tech Stack
+Frontend:
 
-| Layer | Technology |
-|---|---|
-| Frontend | React.js (CRA) |
-| Styling | Tailwind CSS |
-| Animations | Framer Motion |
-| Graph Rendering | D3.js + SVG |
-| Audio | Tone.js |
-| Storage | localforage |
-| PWA | Workbox |
+- React
+- Vite
+- Tailwind CSS
+- Framer Motion
+- Leaflet.js
 
----
+Backend:
 
-## 🚀 Getting Started
+- Node.js
+- Express.js
+- Dijkstra Algorithm
 
-### Prerequisites
+## Project Structure
 
-- Node.js v18+
-- npm v9+
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/traffix.git
-cd traffix
-
-# Install dependencies
-npm install
-
-# Start development server
-npm start
+```text
+traffix/
+|-- frontend/
+|   |-- public/
+|   `-- src/
+|       |-- animations/
+|       |-- components/
+|       |-- hooks/
+|       |-- pages/
+|       |-- services/
+|       |-- styles/
+|       `-- utils/
+|-- backend/
+|   |-- algorithms/
+|   |-- controllers/
+|   |-- routes/
+|   |-- services/
+|   |-- utils/
+|   `-- server.js
+`-- package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+## Local Setup
 
-### Build for Production
+Use Node.js 20.19 or newer.
+
+Install dependencies from the project root:
+
+```bash
+npm install
+```
+
+Start the backend:
+
+```bash
+npm run dev:backend
+```
+
+Start the frontend in another terminal:
+
+```bash
+npm run dev:frontend
+```
+
+Open the frontend at:
+
+```text
+http://localhost:5173
+```
+
+The backend runs at:
+
+```text
+http://localhost:5000
+```
+
+## Environment Variables
+
+Frontend:
+
+```env
+VITE_API_URL=https://your-render-backend-url.onrender.com
+```
+
+Leave `VITE_API_URL` empty locally if you want Vite to proxy `/api` to `http://localhost:5000`.
+
+Backend:
+
+```env
+PORT=5000
+CORS_ORIGIN=https://your-vercel-frontend-url.vercel.app
+```
+
+Use `CORS_ORIGIN=*` during local development if needed.
+
+## How Routing Works
+
+1. The user selects a real source and destination.
+2. The backend generates a realistic local road network around those coordinates.
+3. Each road edge stores physical distance.
+4. Simulated traffic is applied to every edge as Low, Medium, or Heavy and visualized as green, yellow, or red roads.
+5. Dijkstra runs on one of two weight models:
+   - Shortest Distance: edge weight is distance.
+   - Fastest Route: edge weight is estimated travel time after traffic multipliers.
+6. The frontend draws the route on the Leaflet map and displays distance plus travel-time estimates.
+
+The traffic simulation updates over time. Traffix refreshes active routes automatically and also provides a manual traffic refresh action.
+
+## Deployment
+
+### Frontend on Vercel
+
+Set the project root to `frontend`.
+
+Build command:
 
 ```bash
 npm run build
 ```
 
-Serve the `build/` folder with any static host (Vercel, Netlify, GitHub Pages).
-
-### Install as PWA
-
-- **Desktop (Chrome)**: Click the install icon in the address bar
-- **Mobile (Android)**: Tap browser menu → "Add to Home Screen"
-- **iOS Safari**: Tap Share → "Add to Home Screen"
-
----
-
-## 🎮 How to Use
-
-### Basic Navigation
-
-1. Click any node on the graph to set it as **Source** (glows cyan)
-2. Click another node to set **Destination** (glows purple)
-3. Select an algorithm from the control panel
-4. Hit **▶ Play** to watch the algorithm run step by step
-
-### Traffic Simulation
-
-- Open the **Traffic Panel** (bottom right)
-- Drag sliders to increase congestion on specific roads
-- Hit **Random Chaos** to generate a city-wide traffic jam
-- Watch the route change dynamically
-
-### Algorithm Comparison
-
-- Go to the **Compare** page
-- Both Dijkstra and A* run simultaneously on the same graph
-- See which finds the path faster and with fewer node visits
-
-### Emergency Mode
-
-- Toggle the 🚨 **Emergency** switch
-- The algorithm will prioritize the fastest possible route ignoring traffic
-- Path glows red to indicate emergency routing
-
-### Speed Control
-
-- Use the speed slider: **Slow** (1000ms/step) → **Ludicrous** (50ms/step)
-- Use **Step** button to advance one frame at a time (great for presentations)
-
----
-
-## 🧠 Algorithms Explained
-
-| Algorithm | Best For | Time Complexity | Traffic-Aware |
-|---|---|---|---|
-| Dijkstra | Guaranteed shortest path | O((V+E) log V) | ✅ |
-| A* | Faster with heuristic | O(E) best case | ✅ |
-| BFS | Unweighted traversal demo | O(V+E) | ❌ |
-| DFS | Educational comparison | O(V+E) | ❌ |
-| Floyd-Warshall | All-pairs shortest paths | O(V³) | ✅ |
-
----
-
-## 📁 Project Structure
+Output directory:
 
 ```text
-src/
-├── algorithms/          # Pure JS algorithm implementations
-├── components/          # React UI components
-├── data/                # City graph data (nodes + edges)
-├── hooks/               # Custom React hooks
-└── pages/               # Page-level components
+dist
 ```
 
----
+Add this environment variable:
 
-## 🎓 Academic Context
+```env
+VITE_API_URL=https://your-render-backend-url.onrender.com
+```
 
-This project was built for the Design and Analysis of Algorithms (DAA) course. It demonstrates:
+### Backend on Render
 
-- Graph representation (adjacency list)
-- Weighted shortest path algorithms
-- Heuristic search (A*)
-- Algorithm complexity comparison
-- Real-world problem modeling
+Set the project root to `backend`.
 
----
+Build command:
 
-## 👨‍💻 Author
+```bash
+npm install
+```
 
-Built with 🔥 using React, Framer Motion, D3.js, and way too much caffeine.
+Start command:
 
----
+```bash
+npm start
+```
 
-## 📄 License
+Add this environment variable:
 
-MIT License
+```env
+CORS_ORIGIN=https://your-vercel-frontend-url.vercel.app
+```
+
+## PWA
+
+Traffix includes a web app manifest and service worker. After deploying over HTTPS, supported browsers can install it on desktop and mobile.
+
+## Notes
+
+Nominatim is a public OpenStreetMap geocoding service. For heavy production traffic, use a dedicated geocoding provider or a self-hosted Nominatim instance.
