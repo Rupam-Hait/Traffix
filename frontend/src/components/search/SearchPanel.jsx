@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { FiMapPin, FiNavigation, FiRadio, FiSearch } from 'react-icons/fi';
+import { FiMapPin, FiNavigation, FiRadio, FiRefreshCw, FiSearch, FiSliders } from 'react-icons/fi';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import RouteSummary from '../route/RouteSummary';
 import SearchBox from './SearchBox';
@@ -20,8 +20,11 @@ export default function SearchPanel({
   onModeChange,
   onRouteRequest,
   onSourceChange,
+  onSpeedChange,
   route,
   source,
+  visualizationPhase,
+  visualizationSpeed,
 }) {
   const { detect, isDetecting } = useGeolocation(onSourceChange);
   const updateLabel = lastTrafficUpdate
@@ -91,6 +94,35 @@ export default function SearchPanel({
           ))}
         </div>
 
+        <div className="mt-3 rounded-3xl bg-linen/70 p-2">
+          <div className="mb-2 flex items-center gap-2 px-2 text-xs font-black uppercase tracking-[0.2em] text-clay/65">
+            <FiSliders />
+            Speed
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {['slow', 'medium', 'fast'].map((speed) => (
+              <motion.button
+                key={speed}
+                type="button"
+                onClick={() => onSpeedChange(speed)}
+                className={`relative rounded-2xl px-2 py-2.5 text-xs font-black uppercase transition ${
+                  visualizationSpeed === speed ? 'text-clay' : 'text-clay/60 hover:text-clay'
+                }`}
+                whileTap={{ scale: 0.97 }}
+              >
+                {visualizationSpeed === speed && (
+                  <motion.span
+                    layoutId="speed-pill"
+                    className="absolute inset-0 rounded-2xl bg-ivory shadow-panel"
+                    transition={{ type: 'spring', stiffness: 330, damping: 32 }}
+                  />
+                )}
+                <span className="relative">{speed}</span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
         <motion.button
           type="button"
           onClick={onRouteRequest}
@@ -99,19 +131,21 @@ export default function SearchPanel({
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.97 }}
         >
-          <FiSearch />
           {isRouting ? (
             <span className="flex items-center gap-2">
               <motion.span
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
               >
-                ⟳
+                <FiRefreshCw />
               </motion.span>
-              Analyzing route…
+              Analyzing traffic...
             </span>
           ) : (
-            'Find Route'
+            <>
+              <FiSearch />
+              Find Route
+            </>
           )}
         </motion.button>
 
@@ -122,7 +156,13 @@ export default function SearchPanel({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
           >
-            <span>{isTrafficRefreshing ? 'Refreshing traffic' : 'Traffic-aware route active'}</span>
+            <span>
+              {isTrafficRefreshing
+                ? 'Refreshing traffic'
+                : visualizationPhase === 'complete'
+                  ? 'Traffic-aware route active'
+                  : 'Dijkstra exploration active'}
+            </span>
             {updateLabel && <span>{updateLabel}</span>}
           </motion.div>
         )}
@@ -141,7 +181,7 @@ export default function SearchPanel({
         </AnimatePresence>
 
         <div className="mt-4 lg:hidden">
-          <RouteSummary compact route={route} />
+          <RouteSummary compact route={visualizationPhase === 'complete' ? route : null} />
         </div>
       </div>
     </motion.aside>

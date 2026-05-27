@@ -88,6 +88,8 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
   const previous = new Map();
   const visited = new Set();
   const queue = new MinHeap();
+  const visitedOrder = [];
+  const explorationEdges = [];
   let relaxedEdges = 0;
 
   distances.set(sourceId, 0);
@@ -98,6 +100,7 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
     if (!current || visited.has(current.nodeId)) continue;
 
     visited.add(current.nodeId);
+    visitedOrder.push(current.nodeId);
     if (current.nodeId === destinationId) break;
 
     adjacency.get(current.nodeId).forEach((neighbor) => {
@@ -105,6 +108,7 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
 
       const candidate = distances.get(current.nodeId) + neighbor.weight;
       relaxedEdges += 1;
+      explorationEdges.push(neighbor.edgeId);
 
       if (candidate < distances.get(neighbor.nodeId)) {
         distances.set(neighbor.nodeId, candidate);
@@ -118,13 +122,22 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
   }
 
   if (!Number.isFinite(distances.get(destinationId))) {
-    return { path: [], edgeIds: [], visitedNodes: visited.size, relaxedEdges };
+    return {
+      path: [],
+      edgeIds: [],
+      visitedNodes: visited.size,
+      visitedOrder,
+      explorationEdges,
+      relaxedEdges,
+    };
   }
 
   return {
     ...reconstruct(previous, destinationId),
     cost: Number(distances.get(destinationId).toFixed(3)),
     visitedNodes: visited.size,
+    visitedOrder,
+    explorationEdges,
     relaxedEdges,
   };
 }

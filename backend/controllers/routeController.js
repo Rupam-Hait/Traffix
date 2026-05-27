@@ -1,5 +1,4 @@
 const { getRoute } = require('../services/realRoutingService');
-const { applyTrafficToSegments } = require('../services/trafficService');
 const { getTravelProfiles } = require('../services/travelTimeService');
 
 const SUPPORTED_MODES = new Set(['shortest', 'fastest']);
@@ -27,25 +26,19 @@ async function calculateRoute(req, res, next) {
     const source = parseLocation(req.body?.source, 'Source');
     const destination = parseLocation(req.body?.destination, 'Destination');
 
-    // Get real route from OSRM instead of building fake graph
     const realRoute = await getRoute(source, destination, mode);
-    
-    // Apply traffic simulation to segments
-    const trafficSegments = applyTrafficToSegments(realRoute.segments);
-    
-    // Calculate total metrics
-    const totalDistanceKm = trafficSegments.reduce((sum, seg) => sum + seg.distanceKm, 0);
-    const totalTrafficAdjustedMinutes = trafficSegments.reduce((sum, seg) => sum + seg.trafficAdjustedMinutes, 0);
+    const totalDistanceKm = realRoute.metrics.distanceKm;
+    const totalTrafficAdjustedMinutes = realRoute.metrics.trafficAdjustedMinutes;
 
     // Build response
     res.json({
       mode,
-      algorithm: 'OSRM-Based Real Routing',
+      algorithm: 'Dijkstra Real-Road Search',
       source,
       destination,
       route: {
         coordinates: realRoute.coordinates,
-        segments: trafficSegments.map((segment) => ({
+        segments: realRoute.segments.map((segment) => ({
           id: segment.id,
           name: segment.name,
           coordinates: segment.coordinates,
@@ -56,7 +49,8 @@ async function calculateRoute(req, res, next) {
           maneuver: segment.maneuver,
         })),
       },
-      trafficSegments: trafficSegments.map((segment) => ({
+      explorationSteps: realRoute.explorationSteps,
+      trafficSegments: realRoute.trafficSegments.map((segment) => ({
         id: segment.id,
         coordinates: segment.coordinates,
         traffic: segment.traffic,
@@ -67,6 +61,9 @@ async function calculateRoute(req, res, next) {
         carMinutes: Math.max(1, Math.round(totalTrafficAdjustedMinutes)),
         travelTimes: getTravelProfiles(totalDistanceKm, totalTrafficAdjustedMinutes),
         optimizationBasis: mode === 'shortest' ? 'distance' : 'traffic-adjusted travel time',
+        visitedNodes: realRoute.metrics.visitedNodes,
+        relaxedEdges: realRoute.metrics.relaxedEdges,
+        candidateRoads: realRoute.metrics.candidateRoads,
       },
       generatedAt: new Date().toISOString(),
     });

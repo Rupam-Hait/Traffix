@@ -52,7 +52,7 @@ function getTrafficLevel(segmentId) {
  */
 function applyTrafficToSegments(segments) {
   return segments.map((segment) => {
-    const level = getTrafficLevel(segment.id);
+    const level = getTrafficLevel(segment.trafficKey || segment.id);
     const traffic = TRAFFIC[level];
     
     // OSRM provides duration, adjust for traffic

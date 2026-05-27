@@ -9,6 +9,14 @@ import { calculateRoute } from './services/routeApi';
 
 const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629, name: 'India' };
 
+const phaseCopy = {
+  calculating: 'Running Dijkstra optimization...',
+  exploring: 'Exploring nearby roads...',
+  detected: 'Destination detected',
+  revealing: 'Revealing optimized route...',
+  complete: 'Optimal route ready',
+};
+
 export default function App() {
   const [source, setSource] = useState(null);
   const [destination, setDestination] = useState(null);
@@ -20,6 +28,7 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [lastTrafficUpdate, setLastTrafficUpdate] = useState(null);
   const [visualizationSpeed, setVisualizationSpeed] = useState('medium');
+  const [visualizationPhase, setVisualizationPhase] = useState('idle');
 
   useEffect(() => {
     const handler = (event) => {
@@ -36,6 +45,7 @@ export default function App() {
   useEffect(() => {
     setRoute(null);
     setLastTrafficUpdate(null);
+    setVisualizationPhase('idle');
   }, [source?.id, destination?.id]);
 
   const handleRouteRequest = useCallback(async (nextMode = mode, options = {}) => {
@@ -48,6 +58,8 @@ export default function App() {
     if (options.background) {
       setIsTrafficRefreshing(true);
     } else {
+      setRoute(null);
+      setVisualizationPhase('calculating');
       setIsRouting(true);
     }
 
@@ -57,6 +69,7 @@ export default function App() {
       setLastTrafficUpdate(new Date());
     } catch (requestError) {
       setError(requestError.message);
+      setVisualizationPhase('idle');
     } finally {
       setIsRouting(false);
       setIsTrafficRefreshing(false);
@@ -98,6 +111,7 @@ export default function App() {
         route={route}
         source={source}
         visualizationSpeed={visualizationSpeed}
+        onPhaseChange={setVisualizationPhase}
       />
 
       <motion.header
@@ -153,14 +167,38 @@ export default function App() {
         onModeChange={handleModeChange}
         onRouteRequest={() => handleRouteRequest()}
         onSourceChange={setSource}
+        onSpeedChange={setVisualizationSpeed}
         isTrafficRefreshing={isTrafficRefreshing}
         lastTrafficUpdate={lastTrafficUpdate}
         route={route}
         source={source}
+        visualizationPhase={visualizationPhase}
+        visualizationSpeed={visualizationSpeed}
       />
 
       <AnimatePresence>
-        {route && (
+        {visualizationPhase !== 'idle' && phaseCopy[visualizationPhase] && (
+          <motion.div
+            className="pointer-events-none fixed left-1/2 top-[104px] z-30 hidden -translate-x-1/2 lg:block"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+          >
+            <div className="glass-panel flex items-center gap-3 rounded-full px-5 py-3 text-sm font-black text-clay shadow-glass">
+              <motion.span
+                className="h-2.5 w-2.5 rounded-full bg-sage"
+                animate={{ opacity: [0.45, 1, 0.45], scale: [1, 1.35, 1] }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              {phaseCopy[visualizationPhase]}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {route && visualizationPhase === 'complete' && (
           <motion.aside
             className="fixed bottom-6 right-4 z-30 hidden w-[360px] lg:block"
             initial={{ opacity: 0, x: 28 }}
@@ -175,17 +213,17 @@ export default function App() {
 
       <div className="fixed bottom-6 left-[440px] z-30 hidden items-center gap-3 xl:flex">
         <TrafficLegend />
-        {route && (
+        {route && visualizationPhase !== 'idle' && (
           <motion.div
             className="glass-panel flex items-center gap-2 rounded-full px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-clay"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <FiZap />
-            Animation
+            {phaseCopy[visualizationPhase] || 'Animation'}
           </motion.div>
         )}
-        {route && (
+        {(route || source || destination) && (
           <div className="glass-panel flex items-center gap-2 rounded-full px-4 py-2">
             {['slow', 'medium', 'fast'].map((speed) => (
               <motion.button
@@ -205,7 +243,7 @@ export default function App() {
             ))}
           </div>
         )}
-        {route && (
+        {route && visualizationPhase === 'complete' && (
           <motion.button
             type="button"
             onClick={() => handleRouteRequest()}

@@ -64,9 +64,11 @@ export default function RouteSummary({ route, compact = false }) {
       <div className="mt-4 flex items-center justify-between rounded-2xl bg-mint/80 px-4 py-3">
         <span className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-clay/70">
           <FiActivity />
-          Optimized
+          Scanned
         </span>
-        <span className="text-sm font-black text-clay">{route.metrics.visitedNodes} nodes</span>
+        <span className="text-sm font-black text-clay">
+          {route.metrics.relaxedEdges || route.metrics.visitedNodes || 0} roads
+        </span>
       </div>
     </div>
   );

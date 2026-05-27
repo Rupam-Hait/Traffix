@@ -13,6 +13,8 @@
   --traffic-low: #22c55e;
   --traffic-medium: #facc15;
   --traffic-heavy: #ef4444;
+  --route-blue: #2f8fed;
+  --route-blue-soft: #7cc7f8;
 }
 
 * {
@@ -163,13 +165,65 @@ button:disabled {
   font-weight: 800;
 }
 
-.route-glow,
+.exploration-road {
+  filter: drop-shadow(0 0 5px rgba(47, 143, 237, 0.26));
+  transition: opacity 520ms ease, stroke-width 520ms ease;
+}
+
+.exploration-wave {
+  filter: drop-shadow(0 0 8px rgba(47, 143, 237, 0.42));
+  animation: route-pulse 1.35s ease-in-out infinite;
+}
+
+.exploration-wave-glow {
+  filter: drop-shadow(0 0 12px rgba(124, 199, 248, 0.34));
+}
+
+.route-glow {
+  filter: drop-shadow(0 0 13px rgba(47, 143, 237, 0.32));
+}
+
 .route-active {
-  filter: drop-shadow(0 0 12px rgba(212, 163, 115, 0.55));
+  filter: drop-shadow(0 0 9px rgba(47, 143, 237, 0.46));
+}
+
+.route-flow {
+  animation: route-flow 1.1s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(254, 250, 224, 0.48));
 }
 
 .traffic-road {
   transition: stroke 400ms ease, opacity 400ms ease, stroke-width 400ms ease;
+}
+
+.destination-pulse {
+  pointer-events: none;
+}
+
+.destination-pulse span,
+.destination-pulse::before,
+.destination-pulse::after {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 999px;
+  content: '';
+}
+
+.destination-pulse span {
+  inset: 24px;
+  background: var(--route-blue);
+  box-shadow: 0 0 18px rgba(47, 143, 237, 0.42);
+}
+
+.destination-pulse::before,
+.destination-pulse::after {
+  border: 1px solid rgba(47, 143, 237, 0.38);
+  animation: destination-pulse 1.7s ease-out infinite;
+}
+
+.destination-pulse::after {
+  animation-delay: 0.46s;
 }
 
 .bg-traffic-low {
@@ -193,6 +247,35 @@ button:disabled {
   100% {
     opacity: 1;
     transform: translateY(0) scale(1) rotate(-45deg);
+  }
+}
+
+@keyframes route-pulse {
+  0%,
+  100% {
+    opacity: 0.62;
+  }
+
+  50% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes route-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+@keyframes destination-pulse {
+  0% {
+    opacity: 0.58;
+    transform: scale(0.36);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
   }
 }
 
