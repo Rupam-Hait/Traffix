@@ -45,11 +45,11 @@ export default function SearchBox({ icon, label, onSelect, placeholder, value })
 
   return (
     <div className="relative">
-      <label className="mb-1.5 block text-xs font-black uppercase tracking-[0.2em] text-clay/65">
+      <label className="mb-1.5 block text-xs font-bold uppercase tracking-widest text-text-secondary">
         {label}
       </label>
-      <div className="flex items-center gap-3 rounded-3xl bg-ivory/80 px-4 py-3 shadow-panel ring-1 ring-sage/70">
-        <span className="text-lg text-clay/80">{icon}</span>
+      <div className="flex items-center gap-3 rounded-lg bg-surface-secondary px-4 py-3 border border-border transition focus-within:border-accent-red">
+        <span className="text-lg text-text-secondary">{icon}</span>
         <input
           type="text"
           value={query}
@@ -59,14 +59,14 @@ export default function SearchBox({ icon, label, onSelect, placeholder, value })
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="min-w-0 flex-1 bg-transparent text-sm font-bold text-clay outline-none placeholder:text-clay/45"
+          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-text-primary outline-none placeholder:text-text-secondary"
         />
       </div>
 
       <AnimatePresence>
         {isOpen && suggestions.length > 0 && (
           <motion.div
-            className="absolute left-0 right-0 top-[82px] z-50 max-h-56 overflow-auto rounded-3xl bg-ivory p-2 shadow-glass ring-1 ring-sage"
+            className="absolute left-0 right-0 top-[72px] z-50 max-h-56 overflow-auto rounded-lg bg-surface-secondary p-2 glass-panel border border-border"
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -78,10 +78,10 @@ export default function SearchBox({ icon, label, onSelect, placeholder, value })
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => handleSelect(place)}
-                className="w-full rounded-2xl px-3 py-3 text-left transition hover:bg-linen"
+                className="w-full rounded-lg px-3 py-2 text-left transition hover:bg-surface"
               >
-                <span className="block text-sm font-black text-clay">{place.name}</span>
-                <span className="mt-1 block truncate text-xs font-semibold text-clay/65">{place.address}</span>
+                <span className="block text-sm font-semibold text-text-primary">{place.name}</span>
+                <span className="mt-0.5 block truncate text-xs font-semibold text-text-secondary">{place.address}</span>
               </button>
             ))}
           </motion.div>

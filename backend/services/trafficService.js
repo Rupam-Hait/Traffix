@@ -2,17 +2,17 @@ const TRAFFIC = {
   low: {
     label: 'Low Traffic',
     multiplier: 1.05,
-    color: '#22c55e',
+    color: '#00ff88',
   },
   medium: {
     label: 'Medium Traffic',
     multiplier: 1.55,
-    color: '#facc15',
+    color: '#ffcc00',
   },
   heavy: {
     label: 'Heavy Traffic',
     multiplier: 2.35,
-    color: '#ef4444',
+    color: '#ff3b3b',
   },
 };
 

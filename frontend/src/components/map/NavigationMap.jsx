@@ -1,8 +1,8 @@
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 
-const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 const SPEED_CONFIG = {
   slow: { exploration: 9200, detection: 1200, reveal: 3600 },
@@ -88,9 +88,9 @@ function drawFinalRoute(layer, route, duration, onComplete) {
   }).addTo(layer);
 
   const flowLine = L.polyline([], {
-    color: '#fefae0',
+    color: '#7cc7f8',
     weight: 4,
-    opacity: 0.72,
+    opacity: 0.6,
     dashArray: '1 15',
     lineCap: 'round',
     lineJoin: 'round',
@@ -188,13 +188,14 @@ export default function NavigationMap({
     let cancelled = false;
 
     route.trafficSegments.forEach((segment) => {
+      const trafficClass = segment.traffic.level === 'low' ? 'low' : segment.traffic.level === 'medium' ? 'medium' : 'heavy';
       L.polyline(segment.coordinates, {
         color: segment.traffic.color,
-        weight: segment.traffic.level === 'heavy' ? 4 : 3,
-        opacity: segment.traffic.level === 'low' ? 0.2 : 0.3,
+        weight: segment.traffic.level === 'heavy' ? 4 : segment.traffic.level === 'medium' ? 3.5 : 3,
+        opacity: 0.8,
         lineCap: 'round',
         lineJoin: 'round',
-        className: 'traffic-road',
+        className: `traffic-road ${trafficClass}`,
       }).addTo(trafficLayerRef.current);
     });
 
