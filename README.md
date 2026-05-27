@@ -72,13 +72,15 @@ npm install
 Start the backend:
 
 ```bash
-npm run dev:backend
+cd backend
+npm run dev
 ```
 
 Start the frontend in another terminal:
 
 ```bash
-npm run dev:frontend
+cd frontend
+npm run dev
 ```
 
 Open the frontend at:
