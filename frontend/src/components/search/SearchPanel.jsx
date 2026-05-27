@@ -26,6 +26,9 @@ export default function SearchPanel({
   source,
   visualizationPhase,
   visualizationSpeed,
+  activeMode = 'car',
+  onTransportModeChange,
+  isModeAvailable,
 }) {
   const { detect, isDetecting } = useGeolocation(onSourceChange);
   const [drawerExpanded, setDrawerExpanded] = useState(false);
@@ -141,6 +144,28 @@ export default function SearchPanel({
             </div>
           </div>
 
+          {/* Animation Speed Slider */}
+          <div className="mb-4 rounded-xl bg-surface-secondary p-3 border border-border">
+            <p className="text-xs font-bold uppercase tracking-widest text-text-secondary mb-3">
+              SPEED
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-text-secondary w-10">Slow</span>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                value={visualizationSpeed === 'slow' ? 0 : visualizationSpeed === 'medium' ? 1 : 2}
+                onChange={(e) => {
+                  const speeds = ['slow', 'medium', 'fast'];
+                  onSpeedChange?.(speeds[parseInt(e.target.value, 10)]);
+                }}
+                className="flex-1 h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-accent-red"
+              />
+              <span className="text-xs font-semibold text-text-secondary w-10 text-right">Fast</span>
+            </div>
+          </div>
+
           {/* Find Route Button */}
           <motion.button
             type="button"
@@ -209,7 +234,13 @@ export default function SearchPanel({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <RouteSummary route={route} compact />
+              <RouteSummary
+                route={route}
+                compact
+                activeMode={activeMode}
+                onTransportModeChange={onTransportModeChange}
+                isModeAvailable={isModeAvailable}
+              />
             </motion.div>
           )}
         </div>
@@ -348,6 +379,49 @@ export default function SearchPanel({
                   </div>
                 </div>
 
+                <div className="rounded-lg bg-surface-secondary p-3 border border-border">
+                  <p className="text-xs font-bold uppercase tracking-widest text-text-secondary mb-2">
+                    Traffic Mode
+                  </p>
+                  <div className="flex gap-2">
+                    {['live', 'historical'].map((trafficMode) => (
+                      <motion.button
+                        key={trafficMode}
+                        type="button"
+                        className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                          trafficMode === 'live'
+                            ? 'bg-accent-red text-white'
+                            : 'bg-surface text-text-secondary border border-border'
+                        }`}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {trafficMode === 'live' ? 'Live' : 'Historical'}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-surface-secondary p-3 border border-border">
+                  <p className="text-xs font-bold uppercase tracking-widest text-text-secondary mb-3">
+                    SPEED
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 text-xs font-semibold text-text-secondary">Slow</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      value={visualizationSpeed === 'slow' ? 0 : visualizationSpeed === 'medium' ? 1 : 2}
+                      onChange={(e) => {
+                        const speeds = ['slow', 'medium', 'fast'];
+                        onSpeedChange?.(speeds[parseInt(e.target.value, 10)]);
+                      }}
+                      className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-surface accent-accent-red"
+                    />
+                    <span className="w-10 text-right text-xs font-semibold text-text-secondary">Fast</span>
+                  </div>
+                </div>
+
                 <motion.button
                   type="button"
                   onClick={onRouteRequest}
@@ -382,7 +456,13 @@ export default function SearchPanel({
                     transition={{ duration: 0.3 }}
                   >
                     <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">Route Summary</p>
-                    <RouteSummary route={route} compact />
+                    <RouteSummary
+                      route={route}
+                      compact
+                      activeMode={activeMode}
+                      onTransportModeChange={onTransportModeChange}
+                      isModeAvailable={isModeAvailable}
+                    />
                   </motion.div>
                 )}
               </motion.div>

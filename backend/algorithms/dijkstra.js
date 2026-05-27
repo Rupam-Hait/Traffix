@@ -60,8 +60,8 @@ function buildAdjacency(nodes, edges, mode) {
 
   edges.forEach((edge) => {
     const weight = mode === 'shortest' ? edge.distanceKm : edge.travelMinutes;
-    graph.get(edge.from).push({ nodeId: edge.to, edgeId: edge.id, weight });
-    graph.get(edge.to).push({ nodeId: edge.from, edgeId: edge.id, weight });
+    graph.get(edge.from).push({ nodeId: edge.to, edgeId: edge.id, from: edge.from, to: edge.to, weight });
+    graph.get(edge.to).push({ nodeId: edge.from, edgeId: edge.id, from: edge.to, to: edge.from, weight });
   });
 
   return graph;
@@ -82,7 +82,8 @@ function reconstruct(previous, destinationId) {
   return { path, edgeIds };
 }
 
-function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
+function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest', options = {}) {
+  const { stopAtDestination = true } = options;
   const adjacency = buildAdjacency(nodes, edges, mode);
   const distances = new Map(nodes.map((node) => [node.id, Infinity]));
   const previous = new Map();
@@ -90,6 +91,7 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
   const queue = new MinHeap();
   const visitedOrder = [];
   const explorationEdges = [];
+  const explorationSteps = [];
   let relaxedEdges = 0;
 
   distances.set(sourceId, 0);
@@ -101,7 +103,7 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
 
     visited.add(current.nodeId);
     visitedOrder.push(current.nodeId);
-    if (current.nodeId === destinationId) break;
+    if (stopAtDestination && current.nodeId === destinationId) break;
 
     adjacency.get(current.nodeId).forEach((neighbor) => {
       if (visited.has(neighbor.nodeId)) return;
@@ -109,6 +111,12 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
       const candidate = distances.get(current.nodeId) + neighbor.weight;
       relaxedEdges += 1;
       explorationEdges.push(neighbor.edgeId);
+      explorationSteps.push({
+        type: 'exploration',
+        edgeId: neighbor.edgeId,
+        from: neighbor.from,
+        to: neighbor.to,
+      });
 
       if (candidate < distances.get(neighbor.nodeId)) {
         distances.set(neighbor.nodeId, candidate);
@@ -128,6 +136,7 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
       visitedNodes: visited.size,
       visitedOrder,
       explorationEdges,
+      explorationSteps,
       relaxedEdges,
     };
   }
@@ -138,6 +147,7 @@ function runDijkstra(nodes, edges, sourceId, destinationId, mode = 'fastest') {
     visitedNodes: visited.size,
     visitedOrder,
     explorationEdges,
+    explorationSteps,
     relaxedEdges,
   };
 }

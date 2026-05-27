@@ -164,15 +164,6 @@ function buildRealRoadCorridor(osrmData) {
   };
 }
 
-function uniqueEdgeIds(edgeIds) {
-  const seen = new Set();
-  return edgeIds.filter((edgeId) => {
-    if (seen.has(edgeId)) return false;
-    seen.add(edgeId);
-    return true;
-  });
-}
-
 function buildDijkstraRoute(osrmData, source, destination, mode = 'fastest') {
   const corridor = buildRealRoadCorridor(osrmData);
   const trafficEdges = applyTrafficToSegments(corridor.edges).map((edge) => ({
@@ -195,19 +186,42 @@ function buildDijkstraRoute(osrmData, source, destination, mode = 'fastest') {
   const finalCoordinates = result.path.length
     ? stitchRouteCoordinates(finalEdgeIds, edgeById, result.path)
     : finalSegments.flatMap((segment) => segment.coordinates);
-  const explorationEdgeIds = uniqueEdgeIds([...result.explorationEdges, ...finalEdgeIds]);
-  const explorationSteps = explorationEdgeIds
+  const finalEdgeSet = new Set(finalEdgeIds);
+  const explorationSteps = result.explorationSteps
+    .map((step, order) => {
+      const edge = edgeById.get(step.edgeId);
+      if (!edge) return null;
+      return {
+        id: `${edge.id}-explore-${order}`,
+        edgeId: edge.id,
+        order,
+        type: 'exploration',
+        from: step.from,
+        to: step.to,
+        coordinates: edge.from === step.from && edge.to === step.to
+          ? edge.coordinates
+          : [...edge.coordinates].reverse(),
+        traffic: edge.traffic,
+        distanceKm: Number(edge.distanceKm.toFixed(3)),
+        travelMinutes: Number(edge.travelMinutes.toFixed(1)),
+        isFinal: finalEdgeSet.has(edge.id),
+      };
+    })
+    .filter(Boolean);
+  const finalPathSteps = finalEdgeIds
     .map((edgeId, order) => {
       const edge = edgeById.get(edgeId);
       if (!edge) return null;
       return {
-        id: edge.id,
+        id: `${edge.id}-final-${order}`,
+        edgeId: edge.id,
         order,
+        type: 'final',
         coordinates: edge.coordinates,
         traffic: edge.traffic,
         distanceKm: Number(edge.distanceKm.toFixed(3)),
         travelMinutes: Number(edge.travelMinutes.toFixed(1)),
-        isFinal: finalEdgeIds.includes(edge.id),
+        isFinal: true,
       };
     })
     .filter(Boolean);
@@ -222,6 +236,7 @@ function buildDijkstraRoute(osrmData, source, destination, mode = 'fastest') {
     coordinates: finalCoordinates,
     segments: finalSegments,
     explorationSteps,
+    finalPathSteps,
     trafficSegments: trafficEdges,
     metrics: {
       distanceKm: totalDistanceKm,
@@ -233,6 +248,138 @@ function buildDijkstraRoute(osrmData, source, destination, mode = 'fastest') {
     },
     source,
     destination,
+  };
+}
+
+/**
+ * Build both traffic-aware and traffic-free routes in a single pass
+ * trafficRoute: used for Car and Bike modes (with traffic multipliers)
+ * freeRoute: used for Walking and Cycling modes (no traffic multipliers)
+ */
+function buildDualRoutes(osrmData, source, destination, mode = 'fastest') {
+  const corridor = buildRealRoadCorridor(osrmData);
+
+  // Build traffic-aware route
+  const trafficEdges = applyTrafficToSegments(corridor.edges).map((edge) => ({
+    ...edge,
+    travelMinutes: edge.trafficAdjustedMinutes,
+  }));
+  
+  // Build traffic-free route (raw times, no multipliers)
+  const freeEdges = corridor.edges.map((edge) => ({
+    ...edge,
+    travelMinutes: edge.travelMinutes, // Raw time without multiplier
+    traffic: {
+      level: 'low',
+      multiplier: 1.0,
+      color: '#ffffff',
+      label: 'Free Road',
+    },
+  }));
+
+  // Run Dijkstra for traffic route
+  const trafficEdgeById = new Map(trafficEdges.map((edge) => [edge.id, edge]));
+  const trafficResult = runDijkstra(
+    corridor.nodes,
+    trafficEdges,
+    corridor.sourceId,
+    corridor.destinationId,
+    mode,
+  );
+
+  // Run Dijkstra for free route
+  const freeEdgeById = new Map(freeEdges.map((edge) => [edge.id, edge]));
+  const freeResult = runDijkstra(
+    corridor.nodes,
+    freeEdges,
+    corridor.sourceId,
+    corridor.destinationId,
+    'shortest',
+    { stopAtDestination: false },
+  );
+
+  // Helper function to build route object
+  function buildRouteObject(dijkstraResult, edgesMap, allEdges, isTraffic) {
+    const finalEdgeIds = dijkstraResult.edgeIds.length
+      ? dijkstraResult.edgeIds
+      : Array.from(edgesMap.keys()).slice(0, 1);
+    const finalSegments = finalEdgeIds.map((edgeId) => edgesMap.get(edgeId)).filter(Boolean);
+    const finalCoordinates = dijkstraResult.path.length
+      ? stitchRouteCoordinates(finalEdgeIds, edgesMap, dijkstraResult.path)
+      : finalSegments.flatMap((segment) => segment.coordinates);
+
+    const finalEdgeSet = new Set(finalEdgeIds);
+    const explorationSteps = dijkstraResult.explorationSteps
+      .map((step, order) => {
+        const edge = edgesMap.get(step.edgeId);
+        if (!edge) return null;
+        return {
+          id: `${edge.id}-explore-${order}`,
+          edgeId: edge.id,
+          order,
+          type: 'exploration',
+          from: step.from,
+          to: step.to,
+          coordinates: edge.from === step.from && edge.to === step.to
+            ? edge.coordinates
+            : [...edge.coordinates].reverse(),
+          traffic: edge.traffic,
+          distanceKm: Number(edge.distanceKm.toFixed(3)),
+          travelMinutes: Number(edge.travelMinutes.toFixed(1)),
+          isFinal: finalEdgeSet.has(edge.id),
+        };
+      })
+      .filter(Boolean);
+    const finalPathSteps = finalEdgeIds
+      .map((edgeId, order) => {
+        const edge = edgesMap.get(edgeId);
+        if (!edge) return null;
+        return {
+          id: `${edge.id}-final-${order}`,
+          edgeId: edge.id,
+          order,
+          type: 'final',
+          coordinates: edge.coordinates,
+          traffic: edge.traffic,
+          distanceKm: Number(edge.distanceKm.toFixed(3)),
+          travelMinutes: Number(edge.travelMinutes.toFixed(1)),
+          isFinal: true,
+        };
+      })
+      .filter(Boolean);
+
+    const totalDistanceKm = finalSegments.reduce((sum, segment) => sum + segment.distanceKm, 0);
+    const totalTravelMinutes = finalSegments.reduce(
+      (sum, segment) => sum + segment.travelMinutes,
+      0,
+    );
+    const trafficAdjustedMinutes = isTraffic
+      ? finalSegments.reduce((sum, segment) => sum + (segment.trafficAdjustedMinutes || segment.travelMinutes), 0)
+      : totalTravelMinutes;
+
+    return {
+      coordinates: finalCoordinates,
+      segments: finalSegments,
+      explorationSteps,
+      finalPathSteps,
+      trafficSegments: allEdges,
+      metrics: {
+        distanceKm: totalDistanceKm,
+        travelMinutes: totalTravelMinutes,
+        trafficAdjustedMinutes,
+        visitedNodes: dijkstraResult.visitedNodes,
+        relaxedEdges: dijkstraResult.relaxedEdges,
+        candidateRoads: allEdges.length,
+        cost: dijkstraResult.cost,
+      },
+      source,
+      destination,
+    };
+  }
+
+  return {
+    trafficRoute: buildRouteObject(trafficResult, trafficEdgeById, trafficEdges, true),
+    freeRoute: buildRouteObject(freeResult, freeEdgeById, freeEdges, false),
   };
 }
 
@@ -318,18 +465,19 @@ async function getFastestRoute(source, destination) {
 
 /**
  * Get route with specified mode (shortest or fastest)
+ * Returns both traffic-aware and traffic-free routes for transport mode flexibility
  */
 async function getRoute(source, destination, mode = 'fastest') {
-  if (mode === 'shortest') {
-    return getShortestRoute(source, destination);
-  }
-  return getFastestRoute(source, destination);
+  const osrmData = await fetchOSRMRoute(source, destination, 'car');
+  const dualRoutes = buildDualRoutes(osrmData, source, destination, mode);
+  return dualRoutes;
 }
 
 module.exports = {
   getRoute,
   getShortestRoute,
   getFastestRoute,
+  buildDualRoutes,
   fetchOSRMRoute,
   parseOSRMRoute,
   buildDijkstraRoute,

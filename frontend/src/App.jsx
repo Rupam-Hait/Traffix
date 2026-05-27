@@ -12,6 +12,7 @@ export default function App() {
   const [destination, setDestination] = useState(null);
   const [mode, setMode] = useState('fastest');
   const [route, setRoute] = useState(null);
+  const [activeMode, setActiveMode] = useState('car'); // car, bike, cycling, walking
   const [isRouting, setIsRouting] = useState(false);
   const [isTrafficRefreshing, setIsTrafficRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -19,6 +20,7 @@ export default function App() {
   const [visualizationSpeed, setVisualizationSpeed] = useState('medium');
   const [visualizationPhase, setVisualizationPhase] = useState('idle');
   const [showRouteToast, setShowRouteToast] = useState(false);
+  const [animationCache, setAnimationCache] = useState({}); // Modes that have completed their first animation for the current route
 
   const mapFocus = useMemo(() => source || destination || DEFAULT_CENTER, [source, destination]);
 
@@ -26,6 +28,8 @@ export default function App() {
     setRoute(null);
     setLastTrafficUpdate(null);
     setVisualizationPhase('idle');
+    setActiveMode('car');
+    setAnimationCache({});
   }, [source?.id, destination?.id]);
 
   const handleRouteRequest = useCallback(async (nextMode = mode, options = {}) => {
@@ -41,6 +45,8 @@ export default function App() {
       setRoute(null);
       setVisualizationPhase('calculating');
       setIsRouting(true);
+      setActiveMode('car'); // Reset to car mode on new route
+      setAnimationCache({}); // Clear animation cache
     }
 
     try {
@@ -79,15 +85,61 @@ export default function App() {
     }
   }
 
+  /**
+   * Handle transport mode button clicks (car, bike, cycling, walking)
+   * This switches the visualization without fetching a new route
+   */
+  function handleTransportModeChange(newMode) {
+    if (newMode === activeMode) return; // Already active
+    if ((newMode === 'walking' || newMode === 'cycling') && !hasFreeRoute) return;
+    setActiveMode(newMode);
+  }
+
+  const handleModeVisualizationComplete = useCallback((modeKey) => {
+    setAnimationCache((prev) => ({
+      ...prev,
+      [modeKey]: true,
+    }));
+  }, []);
+
+  /**
+   * Get the current route for the active transport mode
+   * Returns the appropriate route (trafficRoute or freeRoute) based on mode
+   */
+  const currentModeRoute = useMemo(() => {
+    if (!route) return null;
+
+    const modeToRouteKey = {
+      car: 'trafficRoute',
+      bike: 'trafficRoute',
+      cycling: 'freeRoute',
+      walking: 'freeRoute',
+    };
+
+    const routeKey = modeToRouteKey[activeMode] || 'trafficRoute';
+    return route[routeKey] || null;
+  }, [route, activeMode]);
+
+  /**
+   * Check if all walking/cycling modes are available (freeRoute exists)
+   */
+  const hasFreeRoute = useMemo(() => {
+    return route && route.freeRoute && route.freeRoute.coordinates && route.freeRoute.coordinates.length > 0;
+  }, [route]);
+
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-black">
       <NavigationMap
         center={mapFocus}
         destination={destination}
-        route={route}
+        route={currentModeRoute}
+        fullRoute={route}
         source={source}
         visualizationSpeed={visualizationSpeed}
         onPhaseChange={setVisualizationPhase}
+        activeMode={activeMode}
+        animationCached={Boolean(animationCache[activeMode])}
+        onAnimationComplete={handleModeVisualizationComplete}
       />
 
       <SearchPanel
@@ -106,6 +158,9 @@ export default function App() {
         source={source}
         visualizationPhase={visualizationPhase}
         visualizationSpeed={visualizationSpeed}
+        activeMode={activeMode}
+        onTransportModeChange={handleTransportModeChange}
+        isModeAvailable={hasFreeRoute}
       />
 
       <AnimatePresence>

@@ -4,18 +4,53 @@ import { useEffect, useRef } from 'react';
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
-const SPEED_CONFIG = {
-  slow: { exploration: 9200, detection: 1200, reveal: 3600 },
-  medium: { exploration: 5600, detection: 850, reveal: 2200 },
-  fast: { exploration: 2800, detection: 520, reveal: 1100 },
+const STEP_DELAYS = {
+  slow: 80,
+  medium: 30,
+  fast: 8,
 };
 
-const ROUTE_BLUE = '#2f8fed';
-const ROUTE_BLUE_SOFT = '#7cc7f8';
+const REVEAL_STEP_DELAY = STEP_DELAYS.medium;
+
+const MODE_CONFIG = {
+  car: {
+    explorationColor: '#7cc7f8',
+    explorationOpacity: 0.72,
+    pathColor: '#2f8fed',
+    pathGlowColor: '#7cc7f8',
+    pathWeight: 4,
+    hasTrafficColors: true,
+  },
+  bike: {
+    explorationColor: '#7cc7f8',
+    explorationOpacity: 0.72,
+    pathColor: '#ff8c00',
+    pathGlowColor: '#ff8c00',
+    pathWeight: 4,
+    hasTrafficColors: true,
+  },
+  cycling: {
+    explorationColor: '#00e5ff',
+    explorationOpacity: 0.82,
+    pathColor: '#00e5ff',
+    pathGlowColor: '#00e5ff',
+    pathWeight: 4.8,
+    hasTrafficColors: false,
+    usePhaseAnimation: true,
+  },
+  walking: {
+    explorationColor: '#ffffff',
+    explorationOpacity: 0.78,
+    pathColor: '#ffffff',
+    pathGlowColor: '#ffffff',
+    pathWeight: 4.8,
+    hasTrafficColors: false,
+    usePhaseAnimation: true,
+  },
+};
 
 function createMarkerIcon(type) {
   const label = type === 'source' ? 'A' : 'B';
-
   return L.divIcon({
     className: `traffix-pin traffix-pin-${type}`,
     html: `<span>${label}</span>`,
@@ -26,7 +61,6 @@ function createMarkerIcon(type) {
 
 function addMarker(layer, location, type) {
   if (!location) return;
-
   L.marker([location.lat, location.lng], {
     icon: createMarkerIcon(type),
     riseOnHover: true,
@@ -51,73 +85,49 @@ function createDestinationPulseIcon() {
 function getVisibleCoordinates(coordinates, progress) {
   if (!coordinates?.length) return [];
   if (coordinates.length <= 2) return coordinates.slice(0, Math.max(1, Math.ceil(progress * coordinates.length)));
-
   const visibleCount = Math.max(2, Math.ceil(progress * (coordinates.length - 1)) + 1);
   return coordinates.slice(0, Math.min(coordinates.length, visibleCount));
 }
 
-function addExploredRoad(layer, step) {
+function getStepColor(step, modeConfig) {
+  return modeConfig.hasTrafficColors ? (step.traffic?.color || modeConfig.explorationColor) : modeConfig.explorationColor;
+}
+
+function addExploredRoad(layer, step, modeConfig, opacity = modeConfig.explorationOpacity) {
   return L.polyline(step.coordinates, {
-    color: ROUTE_BLUE_SOFT,
-    weight: 2.4,
-    opacity: step.isFinal ? 0.34 : 0.22,
+    color: getStepColor(step, modeConfig),
+    weight: 2.45,
+    opacity,
     lineCap: 'round',
     lineJoin: 'round',
     className: 'exploration-road',
   }).addTo(layer);
 }
 
-function drawFinalRoute(layer, route, duration, onComplete) {
-  const coordinates = route.route.coordinates;
-  const glowLine = L.polyline([], {
-    color: ROUTE_BLUE_SOFT,
-    weight: 8,
-    opacity: 0.2,
+function setLayerOpacity(layer, opacity) {
+  if (typeof layer.setStyle === 'function') {
+    layer.setStyle({ opacity, fillOpacity: opacity });
+  }
+}
+
+function renderFinalPath(layer, coordinates, modeConfig) {
+  L.polyline(coordinates, {
+    color: modeConfig.pathGlowColor,
+    weight: modeConfig.pathWeight + 6,
+    opacity: 0.24,
     lineCap: 'round',
     lineJoin: 'round',
     className: 'route-glow',
   }).addTo(layer);
 
-  const activeLine = L.polyline([], {
-    color: ROUTE_BLUE,
-    weight: 4,
-    opacity: 0.96,
+  L.polyline(coordinates, {
+    color: modeConfig.pathColor,
+    weight: modeConfig.pathWeight,
+    opacity: 0.98,
     lineCap: 'round',
     lineJoin: 'round',
     className: 'route-active',
   }).addTo(layer);
-
-  const flowLine = L.polyline([], {
-    color: '#7cc7f8',
-    weight: 4,
-    opacity: 0.6,
-    dashArray: '1 15',
-    lineCap: 'round',
-    lineJoin: 'round',
-    className: 'route-flow',
-  }).addTo(layer);
-
-  let frameId;
-  const start = performance.now();
-
-  function draw(now) {
-    const progress = Math.min(1, (now - start) / duration);
-    const visibleCoordinates = getVisibleCoordinates(coordinates, progress);
-
-    glowLine.setLatLngs(visibleCoordinates);
-    activeLine.setLatLngs(visibleCoordinates);
-    flowLine.setLatLngs(visibleCoordinates);
-
-    if (progress < 1) {
-      frameId = requestAnimationFrame(draw);
-      return;
-    }
-
-    onComplete?.();
-  }
-
-  frameId = requestAnimationFrame(draw);
-  return () => cancelAnimationFrame(frameId);
 }
 
 export default function NavigationMap({
@@ -125,14 +135,24 @@ export default function NavigationMap({
   source,
   destination,
   route,
+  fullRoute,
   visualizationSpeed = 'medium',
   onPhaseChange,
+  activeMode = 'car',
+  animationCached = false,
+  onAnimationComplete,
 }) {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const markerLayerRef = useRef(null);
   const trafficLayerRef = useRef(null);
   const routeLayerRef = useRef(null);
+  const speedRef = useRef(visualizationSpeed);
+  const drawnFinalRef = useRef({ route: null, mode: null });
+
+  useEffect(() => {
+    speedRef.current = visualizationSpeed;
+  }, [visualizationSpeed]);
 
   useEffect(() => {
     if (mapRef.current || !containerRef.current) return;
@@ -172,143 +192,226 @@ export default function NavigationMap({
   }, [source, destination]);
 
   useEffect(() => {
-    if (!mapRef.current || !trafficLayerRef.current || !routeLayerRef.current) return;
+    if (!mapRef.current || !trafficLayerRef.current || !routeLayerRef.current) return undefined;
 
-    trafficLayerRef.current.clearLayers();
-    routeLayerRef.current.clearLayers();
+    const trafficLayer = trafficLayerRef.current;
+    const routeLayer = routeLayerRef.current;
 
     if (!route) {
+      trafficLayer.clearLayers();
+      routeLayer.clearLayers();
+      drawnFinalRef.current = { route: null, mode: null };
       onPhaseChange?.('idle');
-      return;
+      return undefined;
     }
 
-    const speed = SPEED_CONFIG[visualizationSpeed] || SPEED_CONFIG.medium;
+    if (animationCached && drawnFinalRef.current.route === route && drawnFinalRef.current.mode === activeMode) {
+      onPhaseChange?.('complete');
+      return undefined;
+    }
+
+    const modeConfig = MODE_CONFIG[activeMode] || MODE_CONFIG.car;
+    const isTrafficWeightedMode = activeMode === 'car' || activeMode === 'bike';
+    const isFullScanMode = Boolean(modeConfig.usePhaseAnimation);
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const cleanupTasks = [];
     let cancelled = false;
 
-    route.trafficSegments.forEach((segment) => {
-      const trafficClass = segment.traffic.level === 'low' ? 'low' : segment.traffic.level === 'medium' ? 'medium' : 'heavy';
-      L.polyline(segment.coordinates, {
-        color: segment.traffic.color,
-        weight: segment.traffic.level === 'heavy' ? 4 : segment.traffic.level === 'medium' ? 3.5 : 3,
-        opacity: 0.8,
-        lineCap: 'round',
-        lineJoin: 'round',
-        className: `traffic-road ${trafficClass}`,
-      }).addTo(trafficLayerRef.current);
+    const sleep = (ms) => new Promise((resolve) => {
+      const id = window.setTimeout(resolve, ms);
+      cleanupTasks.push(() => window.clearTimeout(id));
     });
 
-    const coordinates = route.route.coordinates;
-    const bounds = L.latLngBounds(coordinates);
-    mapRef.current.fitBounds(bounds, { padding: [90, 90], maxZoom: 15, animate: true, duration: 0.8 });
+    const waitForCurrentStepDelay = async () => {
+      let elapsed = 0;
+      while (!cancelled) {
+        const target = STEP_DELAYS[speedRef.current] || STEP_DELAYS.medium;
+        if (elapsed >= target) return;
+        const chunk = Math.min(8, target - elapsed);
+        await sleep(chunk);
+        elapsed += chunk;
+      }
+    };
 
-    if (prefersReducedMotion) {
-      route.explorationSteps?.forEach((step) => addExploredRoad(routeLayerRef.current, step));
-      L.polyline(coordinates, {
-        color: ROUTE_BLUE,
-        weight: 4,
-        opacity: 0.96,
+    const transitionClear = async () => {
+      const existingLayers = [...trafficLayer.getLayers(), ...routeLayer.getLayers()];
+      if (!existingLayers.length) {
+        trafficLayer.clearLayers();
+        routeLayer.clearLayers();
+        return;
+      }
+
+      existingLayers.forEach((layer) => setLayerOpacity(layer, 0));
+      await sleep(300);
+      if (cancelled) return;
+      trafficLayer.clearLayers();
+      routeLayer.clearLayers();
+    };
+
+    const renderTrafficSegments = () => {
+      if (!isTrafficWeightedMode) return;
+      const trafficSegments = fullRoute?.trafficRoute?.trafficSegments || fullRoute?.trafficRoute?.segments || route.trafficSegments || route.segments;
+
+      trafficSegments?.forEach((segment) => {
+        const traffic = segment.traffic || { level: 'low', color: '#00ff88' };
+        L.polyline(segment.coordinates, {
+          color: traffic.color,
+          weight: traffic.level === 'heavy' ? 4 : traffic.level === 'medium' ? 3.5 : 3,
+          opacity: 0.2,
+          lineCap: 'round',
+          lineJoin: 'round',
+          className: `traffic-road ${traffic.level}`,
+        }).addTo(trafficLayer);
+      });
+    };
+
+    const showFinalState = () => {
+      const ghostSteps = route.explorationSteps || [];
+      ghostSteps.forEach((step) => addExploredRoad(routeLayer, step, modeConfig, isFullScanMode ? 0.15 : 0.13));
+      renderFinalPath(routeLayer, route.coordinates, modeConfig);
+      drawnFinalRef.current = { route, mode: activeMode };
+      onPhaseChange?.('complete');
+    };
+
+    const drawPathProgressively = async () => {
+      const glowLine = L.polyline([], {
+        color: modeConfig.pathGlowColor,
+        weight: modeConfig.pathWeight + 6,
+        opacity: 0.24,
         lineCap: 'round',
         lineJoin: 'round',
-      }).addTo(routeLayerRef.current);
-      onPhaseChange?.('complete');
-      return;
-    }
+        className: 'route-glow',
+      }).addTo(routeLayer);
 
-    const explorationSteps = route.explorationSteps?.length
-      ? route.explorationSteps
-      : route.route.segments;
-    const exploredLines = [];
-    const activeGlow = L.polyline([], {
-      color: ROUTE_BLUE_SOFT,
-      weight: 7,
-      opacity: 0.22,
-      lineCap: 'round',
-      lineJoin: 'round',
-      className: 'exploration-wave-glow',
-    }).addTo(routeLayerRef.current);
+      const activeLine = L.polyline([], {
+        color: modeConfig.pathColor,
+        weight: modeConfig.pathWeight,
+        opacity: 0.98,
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'route-active',
+      }).addTo(routeLayer);
 
-    const activeScan = L.polyline([], {
-      color: ROUTE_BLUE,
-      weight: 3.4,
-      opacity: 0.7,
-      lineCap: 'round',
-      lineJoin: 'round',
-      className: 'exploration-wave',
-    }).addTo(routeLayerRef.current);
+      const flowLine = L.polyline([], {
+        color: modeConfig.pathGlowColor,
+        weight: modeConfig.pathWeight,
+        opacity: 0.56,
+        dashArray: '1 15',
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'route-flow',
+      }).addTo(routeLayer);
 
-    let frameId;
-    let completedCount = 0;
-    const start = performance.now();
-    onPhaseChange?.('exploring');
+      const frameCount = Math.min(160, Math.max(24, route.coordinates.length));
+      for (let frame = 1; frame <= frameCount && !cancelled; frame += 1) {
+        const visibleCoordinates = getVisibleCoordinates(route.coordinates, frame / frameCount);
+        glowLine.setLatLngs(visibleCoordinates);
+        activeLine.setLatLngs(visibleCoordinates);
+        flowLine.setLatLngs(visibleCoordinates);
+        await sleep(REVEAL_STEP_DELAY);
+      }
+    };
 
-    function finishExploration() {
+    const addDestinationPulse = () => {
+      if (!destination) return;
+      L.marker([destination.lat, destination.lng], {
+        icon: createDestinationPulseIcon(),
+        interactive: false,
+        keyboard: false,
+      }).addTo(routeLayer);
+    };
+
+    const runTrafficAnimation = async () => {
+      const exploredLines = [];
+      const steps = route.explorationSteps || [];
+      onPhaseChange?.('exploring');
+
+      for (const step of steps) {
+        if (cancelled) return;
+        exploredLines.push(addExploredRoad(routeLayer, step, modeConfig));
+        await waitForCurrentStepDelay();
+      }
+
+      exploredLines.forEach((line) => line.setStyle({ opacity: 0.13, weight: 2.1 }));
+      addDestinationPulse();
+      onPhaseChange?.('detected');
+      await sleep(400);
       if (cancelled) return;
 
-      activeGlow.setLatLngs([]);
-      activeScan.setLatLngs([]);
-      exploredLines.forEach((line) => line.setStyle({ opacity: 0.13, weight: 2.1 }));
+      onPhaseChange?.('revealing');
+      await drawPathProgressively();
+      if (cancelled) return;
 
-      if (destination) {
-        L.marker([destination.lat, destination.lng], {
-          icon: createDestinationPulseIcon(),
-          interactive: false,
-          keyboard: false,
-        }).addTo(routeLayerRef.current);
+      onPhaseChange?.('complete');
+      drawnFinalRef.current = { route, mode: activeMode };
+      onAnimationComplete?.(activeMode);
+    };
+
+    const runFullScanAnimation = async () => {
+      const exploredLines = [];
+      const steps = route.explorationSteps || [];
+      onPhaseChange?.('exploring');
+
+      for (const step of steps) {
+        if (cancelled) return;
+        exploredLines.push(addExploredRoad(routeLayer, step, modeConfig));
+        await waitForCurrentStepDelay();
       }
+
+      await sleep(400);
+      if (cancelled) return;
 
       onPhaseChange?.('detected');
-
-      const detectionTimer = window.setTimeout(() => {
-        if (cancelled) return;
-        onPhaseChange?.('revealing');
-        cleanupTasks.push(
-          drawFinalRoute(routeLayerRef.current, route, speed.reveal, () => {
-            if (!cancelled) onPhaseChange?.('complete');
-          }),
-        );
-      }, speed.detection);
-      cleanupTasks.push(() => window.clearTimeout(detectionTimer));
-    }
-
-    function drawExploration(now) {
-      const progress = Math.min(1, (now - start) / speed.exploration);
-      const scanPosition = progress * explorationSteps.length;
-      const nextCompletedCount = Math.min(explorationSteps.length, Math.floor(scanPosition));
-
-      for (let index = completedCount; index < nextCompletedCount; index += 1) {
-        exploredLines.push(addExploredRoad(routeLayerRef.current, explorationSteps[index]));
-      }
-      completedCount = nextCompletedCount;
-
-      const activeStep = explorationSteps[Math.min(nextCompletedCount, explorationSteps.length - 1)];
-      const segmentProgress = scanPosition - nextCompletedCount;
-
-      if (activeStep) {
-        const visibleCoordinates = getVisibleCoordinates(activeStep.coordinates, segmentProgress || 0.08);
-        activeGlow.setLatLngs(visibleCoordinates);
-        activeScan.setLatLngs(visibleCoordinates);
+      const fadeFrames = 24;
+      for (let frame = 1; frame <= fadeFrames && !cancelled; frame += 1) {
+        const progress = frame / fadeFrames;
+        const opacity = modeConfig.explorationOpacity * (1 - progress) + 0.15 * progress;
+        exploredLines.forEach((line) => line.setStyle({ opacity, weight: 2.1 }));
+        await sleep(600 / fadeFrames);
       }
 
-      if (progress < 1) {
-        frameId = requestAnimationFrame(drawExploration);
+      if (cancelled) return;
+      addDestinationPulse();
+      onPhaseChange?.('revealing');
+      await drawPathProgressively();
+      if (cancelled) return;
+
+      onPhaseChange?.('complete');
+      drawnFinalRef.current = { route, mode: activeMode };
+      onAnimationComplete?.(activeMode);
+    };
+
+    const run = async () => {
+      await transitionClear();
+      if (cancelled) return;
+
+      renderTrafficSegments();
+
+      if (route.coordinates?.length) {
+        const bounds = L.latLngBounds(route.coordinates);
+        mapRef.current.fitBounds(bounds, { padding: [90, 90], maxZoom: 15, animate: true, duration: 0.8 });
+      }
+
+      if (prefersReducedMotion || animationCached) {
+        showFinalState();
+        if (!animationCached) onAnimationComplete?.(activeMode);
+        return;
+      }
+
+      if (isFullScanMode) {
+        await runFullScanAnimation();
       } else {
-        for (let index = completedCount; index < explorationSteps.length; index += 1) {
-          exploredLines.push(addExploredRoad(routeLayerRef.current, explorationSteps[index]));
-        }
-        finishExploration();
+        await runTrafficAnimation();
       }
-    }
+    };
 
-    frameId = requestAnimationFrame(drawExploration);
-    cleanupTasks.push(() => cancelAnimationFrame(frameId));
+    run();
 
     return () => {
       cancelled = true;
       cleanupTasks.forEach((cleanup) => cleanup());
     };
-  }, [destination, onPhaseChange, route, visualizationSpeed]);
+  }, [activeMode, animationCached, destination, fullRoute, onAnimationComplete, onPhaseChange, route]);
 
   return <div ref={containerRef} className="absolute inset-0 z-0 h-full w-full" aria-label="Traffix map" />;
 }
