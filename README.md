@@ -177,6 +177,3 @@ CORS_ORIGIN=https://your-vercel-frontend-url.vercel.app
 
 Traffix includes a web app manifest and service worker. After deploying over HTTPS, supported browsers can install it on desktop and mobile.
 
-## Notes
-
-Nominatim is a public OpenStreetMap geocoding service. For heavy production traffic, use a dedicated geocoding provider or a self-hosted Nominatim instance.
