@@ -1,179 +1,367 @@
-# Traffix
+<div align="center">
 
-Traffix is a modern smart traffic navigation web application powered by Dijkstra Algorithm. It uses real OpenStreetMap tiles, real place search through Nominatim, browser geolocation, animated route rendering, and simulated traffic-aware routing.
-
-The algorithm is used behind the scenes to solve a realistic navigation problem.
-
-## Features
-
-- Real map interaction with OpenStreetMap and Leaflet
-- Real source and destination search with Nominatim autocomplete
-- Use Current Location with the browser geolocation API
-- Dijkstra-only routing
-- Two route modes: Shortest Distance and Fastest Route
-- Simulated traffic levels: Low, Medium, Heavy
-- Green, yellow, and red traffic road visualization
-- Traffic-aware route weights for fastest routing
-- Distance and ETA metrics for walking, cycling, bike, and car
-- Smooth animated route reveal on the map
-- Responsive UI with a mobile bottom-sheet search panel
-- PWA support for installable desktop and mobile usage
-
-## Tech Stack
-
-Frontend:
-
-- React
-- Vite
-- Tailwind CSS
-- Framer Motion
-- Leaflet.js
-
-Backend:
-
-- Node.js
-- Express.js
-- Dijkstra Algorithm
-
-## Project Structure
-
-```text
-traffix/
-|-- frontend/
-|   |-- public/
-|   `-- src/
-|       |-- animations/
-|       |-- components/
-|       |-- hooks/
-|       |-- pages/
-|       |-- services/
-|       |-- styles/
-|       `-- utils/
-|-- backend/
-|   |-- algorithms/
-|   |-- controllers/
-|   |-- routes/
-|   |-- services/
-|   |-- utils/
-|   `-- server.js
-`-- package.json
+```
+████████╗██████╗  █████╗ ███████╗███████╗██╗██╗  ██╗
+╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██╔════╝██║╚██╗██╔╝
+   ██║   ██████╔╝███████║█████╗  █████╗  ██║ ╚███╔╝ 
+   ██║   ██╔══██╗██╔══██║██╔══╝  ██╔══╝  ██║ ██╔██╗ 
+   ██║   ██║  ██║██║  ██║██║     ██║     ██║██╔╝ ██╗
+   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═╝
 ```
 
-## Local Setup
+### 🚀 Smart Traffic Navigation Powered by Dijkstra Algorithm
 
-Use Node.js 20.19 or newer.
+*Discover the fastest routes with real-time traffic simulation on interactive maps*
 
-Install dependencies from the project root:
+[Explore Demo](#) • [Documentation](#) • [Report Bug](#) • [GitHub](https://github.com/Chandansaha2005/Traffix)
 
+</div>
+
+---
+
+## 📖 Introduction
+
+**Traffix** is a cutting-edge traffic navigation web application that combines intelligent routing algorithms with beautiful, responsive UI. Powered by the Dijkstra Algorithm, Traffix analyzes real road networks and simulated traffic conditions to calculate optimal routes based on your preferences.
+
+Whether you're looking for the shortest distance or the fastest travel time, Traffix intelligently adapts to current traffic patterns and provides accurate ETAs for multiple transportation modes.
+
+---
+
+## 🎯 Features
+
+### Core Navigation
+- ✨ **Real-Time Map Interaction** - Interactive OpenStreetMap with Leaflet.js
+- 📍 **Smart Place Search** - Autocomplete with Nominatim for precise location finding
+- 🗺️ **Current Location Detection** - Browser geolocation API integration
+- 🧭 **Dual Routing Modes** - Choose between Shortest Distance or Fastest Route
+
+### Traffic & Visualization
+- 🚦 **Simulated Traffic Levels** - Low, Medium, Heavy traffic scenarios
+- 🎨 **Traffic Color Coding** - Green (smooth), Yellow (moderate), Red (congested) roads
+- 📊 **Traffic-Aware Routing** - Weights adjust based on traffic conditions
+- 🔄 **Live Traffic Refresh** - Automatic and manual traffic updates
+
+### Trip Analytics
+- ⏱️ **Multi-Mode ETAs** - Walking, Cycling, Bike, and Car travel time estimates
+- 📏 **Distance Metrics** - Precise distance calculations for each route
+- 🎬 **Animated Route Reveal** - Smooth animations as route displays on map
+- 📱 **Responsive Design** - Mobile-optimized bottom-sheet search panel
+
+### Progressive Features
+- 📲 **PWA Support** - Install as desktop or mobile app
+- ⚡ **Performance Optimized** - Lightning-fast route calculations
+
+---
+
+## 🏗️ Architecture
+
+### System Flow
+
+```
+┌─────────────┐
+│   Frontend  │ (React + Vite + Tailwind)
+│   (React)   │
+└──────┬──────┘
+       │ API Calls
+       ▼
+┌─────────────────────────────┐
+│   Backend Server (Express)  │
+│  - Route Calculation        │
+│  - Traffic Simulation       │
+│  - Dijkstra Algorithm       │
+└──────┬──────────────────────┘
+       │
+       ▼
+┌─────────────────┐
+│  Road Network   │
+│  (OSM Data)     │
+└─────────────────┘
+```
+
+### Request/Response Cycle
+
+1. User selects source & destination on map
+2. Frontend sends coordinates to backend
+3. Backend generates realistic road network from OpenStreetMap data
+4. Dijkstra algorithm calculates optimal path with traffic weights
+5. Route, ETA, and distance return to frontend
+6. Animated route renders on Leaflet map
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+| Technology | Purpose |
+|-----------|---------|
+| **React** | UI Framework |
+| **Vite** | Build tool & dev server |
+| **Tailwind CSS** | Styling & responsive design |
+| **Framer Motion** | Animations & transitions |
+| **Leaflet.js** | Interactive mapping |
+
+### Backend
+| Technology | Purpose |
+|-----------|---------|
+| **Node.js** | Runtime environment |
+| **Express.js** | HTTP server framework |
+| **Dijkstra Algorithm** | Route optimization engine |
+| **OpenStreetMap** | Real road network data |
+| **Nominatim API** | Place search & geocoding |
+
+---
+
+## 📸 UI Preview
+
+### Main Navigation Interface
+[**Add screenshot of main map/navigation UI here**]
+
+### Search & Route Results
+[**Add screenshot of search panel and route results here**]
+
+### Traffic Visualization
+[**Add screenshot showing different traffic levels here**]
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js** 20.19 or newer
+- npm or yarn package manager
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/Chandansaha2005/Traffix.git
+cd Traffix
+```
+
+2. **Install dependencies** (from project root)
 ```bash
 npm install
 ```
 
-Start the backend:
-
+3. **Start the Backend**
 ```bash
 cd backend
 npm run dev
 ```
 
-Start the frontend in another terminal:
-
+4. **Start the Frontend** (in another terminal)
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open the frontend at:
-
-```text
-http://localhost:5173
+5. **Open in Browser**
+```
+Frontend: http://localhost:5173
+Backend:  http://localhost:5000
 ```
 
-The backend runs at:
+---
 
-```text
-http://localhost:5000
-```
+## ⚙️ Configuration
 
-## Environment Variables
+### Environment Variables
 
-Frontend:
-
+#### Frontend Setup
+Create `.env` in `/frontend` directory:
 ```env
+# For production deployment
 VITE_API_URL=https://your-render-backend-url.onrender.com
+
+# For local development, leave empty to proxy to backend
 ```
 
-Leave `VITE_API_URL` empty locally if you want Vite to proxy `/api` to `http://localhost:5000`.
-
-Backend:
-
+#### Backend Setup
+Create `.env` in `/backend` directory:
 ```env
 PORT=5000
+
+# For production
 CORS_ORIGIN=https://your-vercel-frontend-url.vercel.app
+
+# For local development
+CORS_ORIGIN=*
 ```
 
-Use `CORS_ORIGIN=*` during local development if needed.
+---
 
-## How Routing Works
+## 📂 Project Structure
 
-1. The user selects a real source and destination.
-2. The backend generates a realistic local road network around those coordinates.
-3. Each road edge stores physical distance.
-4. Simulated traffic is applied to every edge as Low, Medium, or Heavy and visualized as green, yellow, or red roads.
-5. Dijkstra runs on one of two weight models:
-   - Shortest Distance: edge weight is distance.
-   - Fastest Route: edge weight is estimated travel time after traffic multipliers.
-6. The frontend draws the route on the Leaflet map and displays distance plus travel-time estimates.
-
-The traffic simulation updates over time. Traffix refreshes active routes automatically and also provides a manual traffic refresh action.
-
-## Deployment
-
-### Frontend on Vercel
-
-Set the project root to `frontend`.
-
-Build command:
-
-```bash
-npm run build
+```
+Traffix/
+├── frontend/                    # React Application
+│   ├── public/
+│   │   ├── manifest.webmanifest
+│   │   └── service-worker.js
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── map/             # Map rendering
+│   │   │   ├── route/           # Route display & legend
+│   │   │   └── search/          # Search interface
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── pages/               # Page components
+│   │   ├── services/            # API & external services
+│   │   ├── styles/              # Global styles
+│   │   ├── utils/               # Utilities & formatters
+│   │   ├── animations/          # Animation definitions
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── package.json
+│
+├── backend/                     # Node.js Server
+│   ├── algorithms/
+│   │   └── dijkstra.js          # Pathfinding algorithm
+│   ├── controllers/
+│   │   └── routeController.js   # Route request handlers
+│   ├── services/
+│   │   ├── realRoutingService.js    # Route calculation
+│   │   ├── roadGraphService.js      # Network generation
+│   │   ├── trafficService.js        # Traffic simulation
+│   │   └── travelTimeService.js     # ETA calculations
+│   ├── routes/
+│   │   └── routeRoutes.js       # API endpoints
+│   ├── utils/
+│   │   └── geo.js               # Geolocation utilities
+│   ├── server.js
+│   └── package.json
+│
+├── LICENSE
+├── package.json
+└── README.md
 ```
 
-Output directory:
+---
 
-```text
-dist
+## 🧠 How Routing Works
+
+### Step-by-Step Process
+
+```
+1. User Input
+   ↓
+   Selects source & destination with traffic level
+   
+2. Network Generation
+   ↓
+   Backend fetches real road data around coordinates
+   Creates graph with road segments as edges
+   
+3. Traffic Application
+   ↓
+   Applies traffic multipliers to each edge:
+   • Low Traffic: 1.0x multiplier
+   • Medium Traffic: 1.5x multiplier  
+   • Heavy Traffic: 2.5x multiplier
+   
+4. Algorithm Selection
+   ↓
+   Shortest Distance: weight = physical distance
+   Fastest Route: weight = distance ÷ speed × traffic multiplier
+   
+5. Dijkstra Execution
+   ↓
+   Finds optimal path based on selected weight model
+   
+6. Result Display
+   ↓
+   Frontend animates route on map
+   Displays distance, ETA for multiple modes
 ```
 
-Add this environment variable:
+### Traffic Simulation
+The traffic simulation automatically updates over time. Routes are refreshed in real-time, and users can manually trigger traffic updates to reflect current conditions.
 
+---
+
+## 🌍 Deployment
+
+### Frontend Deployment on Vercel
+
+1. **Settings**
+   - Project root: `frontend`
+   - Build command: `npm run build`
+   - Output directory: `dist`
+
+2. **Environment Variables**
 ```env
 VITE_API_URL=https://your-render-backend-url.onrender.com
 ```
 
-### Backend on Render
+### Backend Deployment on Render
 
-Set the project root to `backend`.
+1. **Settings**
+   - Project root: `backend`
+   - Build command: `npm install`
+   - Start command: `npm start`
 
-Build command:
-
-```bash
-npm install
-```
-
-Start command:
-
-```bash
-npm start
-```
-
-Add this environment variable:
-
+2. **Environment Variables**
 ```env
 CORS_ORIGIN=https://your-vercel-frontend-url.vercel.app
 ```
 
-## PWA
+---
 
-Traffix includes a web app manifest and service worker. After deploying over HTTPS, supported browsers can install it on desktop and mobile.
+## 📱 Progressive Web App
+
+Traffix includes built-in PWA support featuring:
+- Web app manifest for app-like installation
+- Service worker for offline capabilities
+- Install prompts for desktop and mobile
+
+**To install:**
+1. Deploy over HTTPS
+2. Open in supported browser (Chrome, Edge, Safari)
+3. Click install or use app menu
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to open issues and submit pull requests.
+
+### How to Contribute
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Chandan Saha**
+- GitHub: [@Chandansaha2005](https://github.com/Chandansaha2005)
+- Project: [Traffix](https://github.com/Chandansaha2005/Traffix)
+
+---
+
+## 🙏 Acknowledgments
+
+- **Leaflet.js** - Interactive mapping library
+- **OpenStreetMap** - Free mapping data
+- **Nominatim** - Geocoding and place search
+- **React** & **Vite** - Modern web development
+- Dijkstra Algorithm - Foundation of route optimization
+
+---
+
+<div align="center">
+
+Made with ❤️ by [Chandan Saha](https://github.com/Chandansaha2005)
+
+</div>
 
