@@ -13,7 +13,7 @@
 
 *Discover the fastest routes with real-time traffic simulation on interactive maps*
 
-[Explore Demo](#) • [Documentation](#) • [Report Bug](#) • [GitHub](https://github.com/Chandansaha2005/Traffix)
+[Explore Demo](https://traffix-map.vercel.app/) • [Documentation](#) • [Report Bug](#) • [GitHub](https://github.com/Chandansaha2005/Traffix)
 
 </div>
 
